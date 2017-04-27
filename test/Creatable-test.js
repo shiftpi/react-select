@@ -38,6 +38,7 @@ describe('Creatable', () => {
 		creatableNode = ReactDOM.findDOMNode(creatableInstance);
 		innserSelectInstance = creatableInstance.select;
 		findAndFocusInputControl();
+		return innserSelectInstance;
 	};
 
 	function findAndFocusInputControl () {
@@ -119,31 +120,29 @@ describe('Creatable', () => {
 
 	it('should create (and auto-select) a new option when placeholder option is clicked', () => {
 		let selectedOption;
-		const options = [];
-		createControl({
+		const instance = createControl({
 			onChange: (option) => selectedOption = option,
-			options
+			options: []
 		});
 		typeSearchText('foo');
 		TestUtils.Simulate.mouseDown(creatableNode.querySelector('.Select-create-option-placeholder'));
-		expect(options, 'to have length', 1);
-		expect(options[0].label, 'to equal', 'foo');
-		expect(selectedOption, 'to be', options[0]);
+		expect(instance.props.options, 'to have length', 1);
+		expect(instance.props.options[0].label, 'to equal', 'foo');
+		expect(selectedOption, 'to be', instance.props.options[0]);
 	});
 
 	it('should create (and auto-select) a new option when ENTER is pressed while placeholder option is selected', () => {
 		let selectedOption;
-		const options = [];
-		createControl({
+		const instance = createControl({
 			onChange: (option) => selectedOption = option,
-			options,
+			options: [],
 			shouldKeyDownEventCreateNewOption: () => true
 		});
 		typeSearchText('foo');
 		TestUtils.Simulate.keyDown(filterInputNode, { keyCode: 13 });
-		expect(options, 'to have length', 1);
-		expect(options[0].label, 'to equal', 'foo');
-		expect(selectedOption, 'to be', options[0]);
+		expect(instance.props.options, 'to have length', 1);
+		expect(instance.props.options[0].label, 'to equal', 'foo');
+		expect(selectedOption, 'to be', instance.props.options[0]);
 	});
 
 	it('should not create a new option if the placeholder option is not selected but should select the focused option', () => {

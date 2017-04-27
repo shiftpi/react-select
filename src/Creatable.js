@@ -20,9 +20,9 @@ const Creatable = React.createClass({
 		// ({ option: Object, options: Array, labelKey: string, valueKey: string }): boolean
 		isOptionUnique: React.PropTypes.func,
 
-	    // Determines if the current input text represents a valid option.
-	    // ({ label: string }): boolean
-	    isValidNewOption: React.PropTypes.func,
+		// Determines if the current input text represents a valid option.
+		// ({ label: string }): boolean
+		isValidNewOption: React.PropTypes.func,
 
 		// See Select.propTypes.menuRenderer
 		menuRenderer: React.PropTypes.any,
@@ -72,6 +72,12 @@ const Creatable = React.createClass({
 		};
 	},
 
+	getInitialState () {
+		return {
+			createdOptions: []
+		};
+	},
+
 	createNewOption () {
 		const {
 			isValidNewOption,
@@ -90,7 +96,9 @@ const Creatable = React.createClass({
 				if (onNewOptionClick) {
 					onNewOptionClick(option);
 				} else {
-					options.unshift(option);
+					this.setState((prevState) => ({
+						createdOptions: [option].concat(prevState.createdOptions)
+					}));
 
 					this.select.selectValue(option);
 				}
@@ -99,7 +107,7 @@ const Creatable = React.createClass({
 	},
 
 	filterOptions (...params) {
-		const { filterOptions, isValidNewOption, options, promptTextCreator } = this.props;
+		const { filterOptions, isValidNewOption, promptTextCreator } = this.props;
 
 		// TRICKY Check currently selected options as well.
 		// Don't display a create-prompt for a value that's selected.
@@ -210,6 +218,7 @@ const Creatable = React.createClass({
 	render () {
 		const {
 			newOptionCreator,
+			options,
 			shouldKeyDownEventCreateNewOption,
 			...restProps
 		} = this.props;
@@ -228,6 +237,7 @@ const Creatable = React.createClass({
 			allowCreate: true,
 			filterOptions: this.filterOptions,
 			menuRenderer: this.menuRenderer,
+			options: this.state.createdOptions.concat(options),
 			onInputChange: this.onInputChange,
 			onInputKeyDown: this.onInputKeyDown,
 			ref: (ref) => {
