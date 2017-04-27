@@ -41,6 +41,7 @@ var propTypes = {
 	loadingPlaceholder: _react2['default'].PropTypes.oneOfType([// replaces the placeholder while options are loading
 	_react2['default'].PropTypes.string, _react2['default'].PropTypes.node]),
 	loadOptions: _react2['default'].PropTypes.func.isRequired, // callback to load options asynchronously; (inputValue: string, callback: Function): ?Promise
+	multi: _react2['default'].PropTypes.bool, // multi-value input
 	options: _react.PropTypes.array.isRequired, // array of options
 	placeholder: _react2['default'].PropTypes.oneOfType([// field placeholder, displayed when there's no value (shared with Select)
 	_react2['default'].PropTypes.string, _react2['default'].PropTypes.node]),
@@ -296,6 +297,10 @@ function reduce(obj) {
 var AsyncCreatable = _react2['default'].createClass({
 	displayName: 'AsyncCreatableSelect',
 
+	focus: function focus() {
+		this.select.focus();
+	},
+
 	render: function render() {
 		var _this = this;
 
@@ -313,6 +318,7 @@ var AsyncCreatable = _react2['default'].createClass({
 								return asyncProps.onInputChange(input);
 							},
 							ref: function (ref) {
+								_this.select = ref;
 								creatableProps.ref(ref);
 								asyncProps.ref(ref);
 							}
@@ -422,7 +428,15 @@ var Creatable = _react2['default'].createClass({
 		};
 	},
 
+	getInitialState: function getInitialState() {
+		return {
+			createdOptions: []
+		};
+	},
+
 	createNewOption: function createNewOption() {
+		var _this = this;
+
 		var _props = this.props;
 		var isValidNewOption = _props.isValidNewOption;
 		var newOptionCreator = _props.newOptionCreator;
@@ -432,19 +446,25 @@ var Creatable = _react2['default'].createClass({
 		var shouldKeyDownEventCreateNewOption = _props.shouldKeyDownEventCreateNewOption;
 
 		if (isValidNewOption({ label: this.inputValue })) {
-			var option = newOptionCreator({ label: this.inputValue, labelKey: this.labelKey, valueKey: this.valueKey });
-			var _isOptionUnique = this.isOptionUnique({ option: option });
+			(function () {
+				var option = newOptionCreator({ label: _this.inputValue, labelKey: _this.labelKey, valueKey: _this.valueKey });
+				var isOptionUnique = _this.isOptionUnique({ option: option });
 
-			// Don't add the same option twice.
-			if (_isOptionUnique) {
-				if (onNewOptionClick) {
-					onNewOptionClick(option);
-				} else {
-					options.unshift(option);
+				// Don't add the same option twice.
+				if (isOptionUnique) {
+					if (onNewOptionClick) {
+						onNewOptionClick(option);
+					} else {
+						_this.setState(function (prevState) {
+							return {
+								createdOptions: [option].concat(prevState.createdOptions)
+							};
+						});
 
-					this.select.selectValue(option);
+						_this.select.selectValue(option);
+					}
 				}
-			}
+			})();
 		}
 	},
 
@@ -452,7 +472,6 @@ var Creatable = _react2['default'].createClass({
 		var _props2 = this.props;
 		var filterOptions = _props2.filterOptions;
 		var isValidNewOption = _props2.isValidNewOption;
-		var options = _props2.options;
 		var promptTextCreator = _props2.promptTextCreator;
 
 		// TRICKY Check currently selected options as well.
@@ -473,12 +492,12 @@ var Creatable = _react2['default'].createClass({
 
 			// TRICKY Compare to all options (not just filtered options) in case option has already been selected).
 			// For multi-selects, this would remove it from the filtered list.
-			var _isOptionUnique2 = this.isOptionUnique({
+			var _isOptionUnique = this.isOptionUnique({
 				option: option,
 				options: excludeOptions.concat(filteredOptions)
 			});
 
-			if (_isOptionUnique2) {
+			if (_isOptionUnique) {
 				var _prompt = promptTextCreator(this.inputValue);
 
 				this._createPlaceholderOption = _newOptionCreator({
@@ -554,14 +573,19 @@ var Creatable = _react2['default'].createClass({
 		}
 	},
 
+	focus: function focus() {
+		this.select.focus();
+	},
+
 	render: function render() {
-		var _this = this;
+		var _this2 = this;
 
 		var _props4 = this.props;
 		var newOptionCreator = _props4.newOptionCreator;
+		var options = _props4.options;
 		var shouldKeyDownEventCreateNewOption = _props4.shouldKeyDownEventCreateNewOption;
 
-		var restProps = _objectWithoutProperties(_props4, ['newOptionCreator', 'shouldKeyDownEventCreateNewOption']);
+		var restProps = _objectWithoutProperties(_props4, ['newOptionCreator', 'options', 'shouldKeyDownEventCreateNewOption']);
 
 		var children = this.props.children;
 
@@ -576,15 +600,16 @@ var Creatable = _react2['default'].createClass({
 			allowCreate: true,
 			filterOptions: this.filterOptions,
 			menuRenderer: this.menuRenderer,
+			options: this.state.createdOptions.concat(options),
 			onInputChange: this.onInputChange,
 			onInputKeyDown: this.onInputKeyDown,
 			ref: function ref(_ref) {
-				_this.select = _ref;
+				_this2.select = _ref;
 
 				// These values may be needed in between Select mounts (when this.select is null)
 				if (_ref) {
-					_this.labelKey = _ref.props.labelKey;
-					_this.valueKey = _ref.props.valueKey;
+					_this2.labelKey = _ref.props.labelKey;
+					_this2.valueKey = _ref.props.valueKey;
 				}
 			}
 		});
@@ -859,6 +884,7 @@ var Select = _react2['default'].createClass({
 
 	propTypes: {
 		addLabelText: _react2['default'].PropTypes.string, // placeholder displayed when you want to add a label on a multi-value input
+		'aria-describedby': _react2['default'].PropTypes.string, // HTML ID(s) of element(s) that should be used to describe this input (for assistive tech)
 		'aria-label': _react2['default'].PropTypes.string, // Aria label (for assistive tech)
 		'aria-labelledby': _react2['default'].PropTypes.string, // HTML ID of an element that should be used as the label (for assistive tech)
 		arrowRenderer: _react2['default'].PropTypes.func, // Create drop-down caret element
@@ -1173,7 +1199,7 @@ var Select = _react2['default'].createClass({
 			});
 		} else {
 			// otherwise, focus the input and open the menu
-			this._openAfterFocus = true;
+			this._openAfterFocus = this.props.openOnFocus;
 			this.focus();
 		}
 	},
@@ -1706,6 +1732,7 @@ var Select = _react2['default'].createClass({
 			'aria-owns': ariaOwns,
 			'aria-haspopup': '' + isOpen,
 			'aria-activedescendant': isOpen ? this._instancePrefix + '-option-' + focusedOptionIndex : this._instancePrefix + '-value',
+			'aria-describedby': this.props['aria-describedby'],
 			'aria-labelledby': this.props['aria-labelledby'],
 			'aria-label': this.props['aria-label'],
 			className: className,
@@ -1877,7 +1904,14 @@ var Select = _react2['default'].createClass({
 
 		var focusedOption = this.state.focusedOption || selectedOption;
 		if (focusedOption && !focusedOption.disabled) {
-			var focusedOptionIndex = options.indexOf(focusedOption);
+			var focusedOptionIndex = -1;
+			options.some(function (option, index) {
+				var isOptionEqual = option.value === focusedOption.value;
+				if (isOptionEqual) {
+					focusedOptionIndex = index;
+				}
+				return isOptionEqual;
+			});
 			if (focusedOptionIndex !== -1) {
 				return focusedOptionIndex;
 			}
